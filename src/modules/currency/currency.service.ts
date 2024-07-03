@@ -22,7 +22,7 @@ export class CurrencyService {
     private readonly uniswapService: UniswapService,
   ) {}
 
-  @MessagePattern({ cmd: 'get_rate_binance' })
+  @MessagePattern({ cmd: 'getRate' })
   async getRate(pairs: GetCurrencyDto): Promise<CreateCurrencyDto | string> {
     const keys = await this.redis.keys('*');
 
