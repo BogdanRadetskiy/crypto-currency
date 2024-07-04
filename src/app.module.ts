@@ -6,12 +6,16 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { RedisModule } from '@nestjs-modules/ioredis';
 import { UniswapModule } from './modules/uniswap/uniswap.module';
 import { env } from './common/config/env.config';
+import { CurrencyController } from './modules/currency/currency.controller';
+import { CurrencyService } from './modules/currency/currency.service';
+import { UniswapService } from './modules/uniswap/uniswap.service';
+import { CronTasksModule } from './modules/cron/cron.module';
 
 @Module({
   imports: [
     ClientsModule.register([
       {
-        name: 'crypto currency',
+        name: 'crypto_currency',
         transport: Transport.TCP,
         options: {
           host: env.TRANSPORT_HOST,
@@ -27,8 +31,9 @@ import { env } from './common/config/env.config';
     MongooseModule.forRoot(env.URL),
     CurrencyModule,
     UniswapModule,
+    CronTasksModule,
   ],
-  controllers: [],
-  providers: [],
+  controllers: [CurrencyController],
+  providers: [CurrencyService, UniswapService],
 })
 export class AppModule {}

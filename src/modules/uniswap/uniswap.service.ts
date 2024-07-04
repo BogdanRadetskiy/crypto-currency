@@ -37,14 +37,14 @@ export class UniswapService {
 
         const pairContract = new this.web3.eth.Contract(
           getABI('IPair'),
-          pairAddress
+          pairAddress,
         );
 
         const reserves: { _reserve0: string; _reserve1: string } =
           await pairContract.methods.getReserves().call();
         const rate =
           parseFloat(reserves._reserve0) / parseFloat(reserves._reserve1);
-        
+
         rates.push({
           address: `${pair.tokenA}/${pair.tokenB}`,
           rate,
@@ -52,11 +52,11 @@ export class UniswapService {
         });
       } catch (error) {
         console.error(
-          `Error fetching rate for pair ${pair.tokenA}/${pair.tokenB}: ${error.message}`
+          `Error fetching rate for pair ${pair.tokenA}/${pair.tokenB}: ${error.message}`,
         );
         if (error.message.includes('out of gas')) {
           console.log(
-            'Transaction out of gas. Try increasing gas limit or optimizing contract code.'
+            'Transaction out of gas. Try increasing gas limit or optimizing contract code.',
           );
         }
       }

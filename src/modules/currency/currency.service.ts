@@ -3,7 +3,6 @@ import { Injectable } from '@nestjs/common';
 import { CurrencyRepository } from 'src/repository/repositorys/currency.repository';
 import { PRICE_LINK } from 'src/common/constans/binance.constans';
 import { PAIRS } from 'src/common/constans/pairs.constans';
-import { Cron, CronExpression } from '@nestjs/schedule';
 import { DATE } from 'src/common/constans/date.constans';
 import { CreateCurrencyDto } from './dto/request/create-currency.dto';
 import { ASSETS } from 'src/common/constans/assets.constans';
@@ -35,12 +34,12 @@ export class CurrencyService {
 
     const foundCurrency = cachedData.find((currency: any) => {
       return (
-          currency &&
-          currency.symbolA === pairs.symbolA &&
-          currency.symbolB === pairs.symbolB &&
-          currency.isCorrect === true
+        currency &&
+        currency.symbolA === pairs.symbolA &&
+        currency.symbolB === pairs.symbolB &&
+        currency.isCorrect === true
       );
-  });
+    });
 
     if (foundCurrency) {
       return foundCurrency;
@@ -51,47 +50,47 @@ export class CurrencyService {
 
   async saveCurrencyRate(): Promise<void> {
     const [binancePrices, uniswapRates] = await Promise.all([
-        this.getPricesInBinance(),
-        this.uniswapService.getRates()
+      this.getPricesInBinance(),
+      this.uniswapService.getRates(),
     ]);
 
     const currencyPromises = binancePrices.map(async (price) => {
-        const matchingUniswapRate = uniswapRates.find(rate => rate.symbol === price.symbol);
+      const matchingUniswapRate = uniswapRates.find(
+        (rate) => rate.symbol === price.symbol,
+      );
 
-        if (matchingUniswapRate) {
-            const binanceRate = parseFloat(price.price);
-            const uniswapRate = matchingUniswapRate.rate;
+      if (matchingUniswapRate) {
+        const binanceRate = parseFloat(price.price);
+        const uniswapRate = matchingUniswapRate.rate;
 
-            const rateDifference = Math.abs(binanceRate - uniswapRate);
-            const percentageDifference = (rateDifference / uniswapRate) * 100;
+        const rateDifference = Math.abs(binanceRate - uniswapRate);
+        const percentageDifference = (rateDifference / uniswapRate) * 100;
 
-            let isCorrect = percentageDifference <= 10;
+        let isCorrect = percentageDifference <= 10;
 
-            const currency: CreateCurrencyDto = {
-                symbolA: price.baseAsset,
-                symbolB: price.quoteAsset,
-                pair: price.symbol,
-                timestamp: DATE,
-                pairAddressUni: matchingUniswapRate.address,
-                rate: binanceRate,
-                isCorrect: isCorrect,
-            };
+        const currency: CreateCurrencyDto = {
+          symbolA: price.baseAsset,
+          symbolB: price.quoteAsset,
+          pair: price.symbol,
+          timestamp: DATE,
+          pairAddressUni: matchingUniswapRate.address,
+          rate: binanceRate,
+          isCorrect: isCorrect,
+        };
 
-            await this.currencyRepository.save(currency);
+        await this.currencyRepository.save(currency);
 
-            const cacheKey = `currency:${price.symbol}`;
-            await this.redis.set(cacheKey, JSON.stringify(currency), 'EX', 80);
+        const cacheKey = `currency:${price.symbol}`;
+        await this.redis.set(cacheKey, JSON.stringify(currency), 'EX', 80);
 
-            return currency;
-        }
+        return currency;
+      }
     });
 
     await Promise.all(currencyPromises);
-}
-
-  async getPairsFromDbInTimeRange(
-    dateRange: GetCurrencyInDateRangeDto,
-  ): Promise<any> {
+  }
+  @MessagePattern({ cmd: 'getHistoryRates' })
+  async getHistoryRates(dateRange: GetCurrencyInDateRangeDto): Promise<any> {
     return await this.currencyRepository.getPair(dateRange);
   }
 
@@ -145,11 +144,5 @@ export class CurrencyService {
       console.error('Error fetching exchange info:', error);
       throw error;
     }
-  }
-
-  @Cron(CronExpression.EVERY_MINUTE)
-  async handleCron(): Promise<void> {
-    console.log('Running cron job...');
-    await this.saveCurrencyRate();
   }
 }
